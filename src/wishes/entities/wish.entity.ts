@@ -35,7 +35,16 @@ export class Wish {
   @IsPositive()
   price: number;
 
-  @Column()
+  @Column({ default: 0 })
   @IsPositive()
   raised: number;
+
+  @Column()
+  @IsString()
+  @Length(1, 1024)
+  description: string;
+
+  @Column({ default: 0 })
+  @IsPositive()
+  copied: number;
 }
