@@ -1,8 +1,12 @@
 import { IsPositive, IsString, IsUrl, Length } from 'class-validator';
+import { Offer } from 'src/offers/entities/offer.entity';
+import { User } from 'src/users/entities/user.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -47,4 +51,10 @@ export class Wish {
   @Column({ default: 0 })
   @IsPositive()
   copied: number;
+
+  @ManyToOne(() => User, (user) => user.wishes)
+  owner: User;
+
+  @OneToMany(() => Offer, (offer) => offer.item, { cascade: true })
+  offers: Offer[];
 }
