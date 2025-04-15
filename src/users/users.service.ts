@@ -3,7 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { FindManyOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -12,6 +12,10 @@ export class UsersService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
+
+  findOne(query: FindOneOptions<User>) {
+    return this.userRepository.findOneOrFail(query);
+  }
 
   findMany(query: FindManyOptions<User>) {
     return this.userRepository.find(query);
@@ -42,19 +46,11 @@ export class UsersService {
     });
   }
 
-  findById(id: number) {
-    return this.userRepository.findOneBy({ id });
-  }
-
   findAll() {
-    return `This action returns all users`;
+    return this.userRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  findById(id: number) {
+    return this.userRepository.findOneOrFail({ where: { id } });
   }
 }

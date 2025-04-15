@@ -5,13 +5,16 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   HttpCode,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { WishesService } from 'src/wishes/wishes.service';
+import { FindUserDto } from './dto/find-user.dto';
+
+import { Request } from 'express';
+import safeUserSelect from 'src/utils/safeUserSelect';
 
 @Controller('users')
 export class UsersController {
@@ -22,27 +25,51 @@ export class UsersController {
 
   @Post('find')
   @HttpCode(201)
-  async findMany(@Body() createUserDto: CreateUserDto) {
-    return await this.usersService.create(createUserDto);
+  findMany(@Body() findUserDto: FindUserDto) {
+    const { email, username } = findUserDto;
+    return this.usersService.findMany({
+      where: [{ email }, { username }],
+    });
   }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @Get('me')
+  findMe(@Req() req: Request) {
+    return this.usersService.findOne({
+      where: { id: req.user.id },
+      select: safeUserSelect,
+    });
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @Get('me/wishes')
+  async getMeWishes(@Req() req: Request) {
+    return (
+      await this.usersService.findOne({
+        where: { id: req.user.id },
+        relations: ['wishes'],
+      })
+    ).wishes;
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @Get(':username')
+  findOne(@Param('username') username: string) {
+    return this.usersService.findOne({ where: { username } });
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @Get(':username/wishes')
+  async getUserWishes(@Param('username') username: string) {
+    return (
+      await this.usersService.findOne({
+        where: { username },
+        relations: ['wishes'],
+      })
+    ).wishes;
+  }
+
+  @Patch('me')
+  async update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
+    const user = await this.usersService.update(req.user, updateUserDto);
+    delete user.password;
+
+    return user;
   }
 }
