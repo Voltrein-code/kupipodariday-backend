@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { WishesService } from 'src/wishes/wishes.service';
 import { FindUserDto } from './dto/find-user.dto';
 
 import { Request } from 'express';
@@ -18,10 +17,7 @@ import safeUserSelect from 'src/utils/safeUserSelect';
 
 @Controller('users')
 export class UsersController {
-  constructor(
-    private readonly usersService: UsersService,
-    private readonly wishesService: WishesService,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
   @Post('find')
   @HttpCode(201)
