@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Offer } from './entities/offer.entity';
@@ -27,6 +31,10 @@ export class OffersService {
 
     if (wish.owner.id === user.id) {
       throw new ForbiddenException('Запрещено скидываться на свой же подарок');
+    }
+
+    if (wish.raised + amount > wish.price) {
+      
     }
   }
 
