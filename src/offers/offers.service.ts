@@ -1,25 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOfferDto } from './dto/create-offer.dto';
-import { UpdateOfferDto } from './dto/update-offer.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Offer } from './entities/offer.entity';
 import { Repository } from 'typeorm';
-import { WishesService } from 'src/wishes/wishes.service';
-import { UsersService } from 'src/users/users.service';
+import { Wish } from 'src/wishes/entities/wish.entity';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class OffersService {
   constructor(
     @InjectRepository(Offer)
     private offerRepository: Repository<Offer>,
-    private readonly wishesService: WishesService,
-    private readonly usersService: UsersService,
+    @InjectRepository(Wish)
+    private wishRepository: Repository<Wish>,
   ) {}
 
-  async create(createOfferDto: CreateOfferDto, userId: number) {
-    const { amount, itemId } = createOfferDto;
+  async create(createOfferDto: CreateOfferDto, user: User) {
+    const { amount, hidden, itemId } = createOfferDto;
 
-    const wish = await this.wishesService.findOne()
+    const wish = await this.wishRepository.findOne({
+      where: { id: itemId },
+      relations: ['owner', 'offers'],
+    });
+
+    if (!wish) throw new NotFoundException('Не удалось найти подарок по id');
+
+    if (wish.owner.id === user.id) {
+      throw new ForbiddenException('Запрещено скидываться на свой же подарок');
+    }
   }
 
   findAll() {
