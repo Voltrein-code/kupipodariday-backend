@@ -99,7 +99,7 @@ export class WishesService {
     });
 
     if (!wish) throw new NotFoundException('Не удалось найти подарок по id');
-    
+
     wish.copied += 1;
     await this.wishRepository.save(Object.assign({}, wish));
 
