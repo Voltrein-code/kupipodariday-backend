@@ -15,7 +15,7 @@ import deletePassword from 'src/utils/deletePasswords';
 export class WishesService {
   constructor(
     @InjectRepository(Wish)
-    private wishRepository: Repository<Wish>,
+    private readonly wishRepository: Repository<Wish>,
   ) {}
 
   create(createWishDto: CreateWishDto, owner: User) {
@@ -99,16 +99,16 @@ export class WishesService {
     });
 
     if (!wish) throw new NotFoundException('Не удалось найти подарок по id');
+    
+    wish.copied += 1;
+    await this.wishRepository.save(Object.assign({}, wish));
 
     const copiedWish = this.wishRepository.create({
-      ...Object.assign({}, wish),
+      ...Object.assign({}, { ...wish, id: undefined }),
       owner: user,
       raised: 0,
       copied: 0,
     });
-
-    wish.copied += 1;
-    await this.wishRepository.save(wish);
 
     return this.wishRepository.save(copiedWish);
   }
