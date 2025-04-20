@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -9,6 +10,7 @@ import { Offer } from './entities/offer.entity';
 import { Repository } from 'typeorm';
 import { Wish } from 'src/wishes/entities/wish.entity';
 import { User } from 'src/users/entities/user.entity';
+import deletePassword from 'src/utils/deletePasswords';
 
 @Injectable()
 export class OffersService {
@@ -34,23 +36,40 @@ export class OffersService {
     }
 
     if (wish.raised + amount > wish.price) {
-      
+      throw new BadRequestException('Сумма сбора превысила стоимость подарка');
     }
+
+    wish.raised += createOfferDto.amount;
+    await this.wishRepository.save(wish);
+
+    return this.offerRepository.save(
+      this.offerRepository.create({
+        amount,
+        hidden,
+        user,
+        item: wish,
+      }),
+    );
   }
 
-  findAll() {
-    return `This action returns all offers`;
+  async findAll() {
+    const allOffers = await this.offerRepository.find({
+      relations: ['user', 'item'],
+    });
+
+    return allOffers.map((el) => ({ ...el, user: deletePassword(el.user) }));
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} offer`;
-  }
+  async findOne(id: number) {
+    const offer = await this.offerRepository.findOne({
+      where: { id },
+      relations: ['user', 'item'],
+    });
 
-  update(id: number, updateOfferDto: UpdateOfferDto) {
-    return `This action updates a #${id} offer`;
-  }
+    if (!offer) throw new NotFoundException('Не удалось найти оффер по id');
 
-  remove(id: number) {
-    return `This action removes a #${id} offer`;
+    offer.user = deletePassword(offer.user);
+
+    return offer;
   }
 }
