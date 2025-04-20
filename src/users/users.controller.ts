@@ -7,65 +7,57 @@ import {
   Param,
   HttpCode,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { FindUserDto } from './dto/find-user.dto';
-
 import { Request } from 'express';
-import safeUserSelect from 'src/utils/safeUserSelect';
+import { JwtAuthGuard } from 'src/auth/jwt.guard';
+import deletePassword from 'src/utils/deletePasswords';
 
+@UseGuards(JwtAuthGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('find')
   @HttpCode(201)
-  findMany(@Body() findUserDto: FindUserDto) {
-    const { email, username } = findUserDto;
-    return this.usersService.findMany({
-      where: [{ email }, { username }],
-    });
+  findMany(@Body('query') query: string) {
+    return this.usersService.findMany(query);
   }
 
   @Get('me')
   findMe(@Req() req: Request) {
-    return this.usersService.findOne({
-      where: { id: req.user.id },
-      select: safeUserSelect,
-    });
+    return this.usersService.findById(req.user.id);
   }
 
   @Get('me/wishes')
   async getMeWishes(@Req() req: Request) {
-    return (
-      await this.usersService.findOne({
-        where: { id: req.user.id },
-        relations: ['wishes'],
-      })
-    ).wishes;
+    const user = await this.usersService.findById(req.user.id);
+
+    return user.wishes.map((el) => ({
+      ...el,
+      owner: deletePassword(el.owner),
+    }));
   }
 
   @Get(':username')
   findOne(@Param('username') username: string) {
-    return this.usersService.findOne({ where: { username } });
+    return this.usersService.findOne(username);
   }
 
   @Get(':username/wishes')
   async getUserWishes(@Param('username') username: string) {
-    return (
-      await this.usersService.findOne({
-        where: { username },
-        relations: ['wishes'],
-      })
-    ).wishes;
+    const user = await this.usersService.findOne(username);
+
+    return user.wishes.map((el) => ({
+      ...el,
+      owner: deletePassword(el.owner),
+    }));
   }
 
   @Patch('me')
-  async update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
-    const user = await this.usersService.update(req.user, updateUserDto);
-    delete user.password;
-
-    return user;
+  update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(req.user.id, updateUserDto);
   }
 }

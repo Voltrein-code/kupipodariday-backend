@@ -31,9 +31,7 @@ export class AuthService {
   }
 
   async checkUser(username: string, password: string) {
-    const user = await this.usersService.findOne({
-      where: { username: username },
-    });
+    const user = await this.usersService.findOne(username, false);
 
     if (!(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Неверный логин или пароль');

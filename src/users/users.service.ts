@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { ILike, Repository } from 'typeorm';
+
+import deletePassword from 'src/utils/deletePasswords';
+import unSafeUserSelect from 'src/utils/unSafeUserSelect';
+import safeUserSelect from 'src/utils/safeUserSelect';
 
 @Injectable()
 export class UsersService {
@@ -13,44 +16,52 @@ export class UsersService {
     private userRepository: Repository<User>,
   ) {}
 
-  findOne(query: FindOneOptions<User>) {
-    return this.userRepository.findOneOrFail(query);
+  async findOne(username: string, safe = true) {
+    return await this.userRepository.findOne({
+      where: { username },
+      relations: ['wishes'],
+      select: safe ? safeUserSelect : unSafeUserSelect,
+    });
   }
 
-  findMany(query: FindManyOptions<User>) {
-    return this.userRepository.find(query);
+  async findMany(query: string) {
+    const users = await this.userRepository.find({
+      where: [
+        { username: ILike(`%${query}%`) },
+        { email: ILike(`%${query}%`) },
+      ],
+      relations: ['wishes'],
+    });
+
+    return users.map((el) => deletePassword(el));
   }
 
   async create(createUserDto: CreateUserDto) {
-    const hash = await bcrypt.hash(createUserDto.password, 10);
-    return this.userRepository.save({
-      ...createUserDto,
-      password: hash,
-    });
+    return deletePassword(
+      await this.userRepository.save(this.userRepository.create(createUserDto)),
+    );
   }
 
-  async update(user: User, updateUserDto: UpdateUserDto) {
-    const { password } = updateUserDto;
-
-    if (password) {
-      return this.userRepository.save({
-        ...user,
-        ...updateUserDto,
-        password: await bcrypt.hash(password, 10),
-      });
-    }
-
-    return this.userRepository.save({
-      ...user,
-      ...updateUserDto,
-    });
+  async update(id: number, updateUserDto: UpdateUserDto) {
+    await this.userRepository.update(id, updateUserDto);
+    return this.findById(id);
   }
 
   findAll() {
     return this.userRepository.find();
   }
 
-  findById(id: number) {
-    return this.userRepository.findOneOrFail({ where: { id } });
+  async findById(id: number) {
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['wishes'],
+    });
+
+    if (!user)
+      throw new NotFoundException(
+        'Не удалось найти пользователя по переданному id',
+      );
+
+    return deletePassword(user);
   }
 }
