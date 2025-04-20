@@ -100,15 +100,15 @@ export class WishesService {
 
     if (!wish) throw new NotFoundException('Не удалось найти подарок по id');
 
-    wish.copied++;
-    await this.wishRepository.save(wish);
-
     const copiedWish = this.wishRepository.create({
       ...Object.assign({}, wish),
       owner: user,
       raised: 0,
       copied: 0,
     });
+
+    wish.copied += 1;
+    await this.wishRepository.save(wish);
 
     return this.wishRepository.save(copiedWish);
   }
